@@ -6,7 +6,7 @@ from aiogram.filters import CommandStart, Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.enums import ParseMode
 
-TOKEN = "ТВОЙ_ТОКЕН_ОТ_BOTFATHER"
+TOKEN = "7576891927:AAFG_PZfzyV93lOtjLTmOPfludJGZmkrmZI"
 
 # Список действий на день
 day_steps = [
