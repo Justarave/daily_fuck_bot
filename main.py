@@ -8,27 +8,56 @@ from aiogram.enums import ParseMode
 
 TOKEN = "7576891927:AAFG_PZfzyV93lOtjLTmOPfludJGZmkrmZI"
 
-# Список действий на день
-day_steps = [
-    "Прими утренние БАДы",
-    "Позавтракай",
-    "Прогулка 15 минут",
-    "Прими душ",
-    "Медитация, чтение, визуализация",
-    "Работа",
-    "Второй завтрак",
-    "Тренажерный зал (если нужно)",
-    "Работа",
-    "Полдник",
-    "Работа",
-    "Ужин (и вечерние БАДы)",
-    "Работа",
-    "Душ перед сном",
-    "Сон"
-]
+# Режимы дня и их шаги
+day_modes = {
+    "Ебашим 🛠": [
+        "Прими утренние БАДы",
+        "Позавтракай",
+        "Прогулка 15 минут",
+        "Прими душ",
+        "Медитация, чтение, визуализация",
+        "Работа",
+        "Второй завтрак",
+        "Тренажерный зал (если нужно)",
+        "Работа",
+        "Полдник",
+        "Работа",
+        "Ужин (и вечерние БАДы)",
+        "Работа",
+        "Душ перед сном",
+        "Сон"
+    ],
+    "Расслабон 🏖": [
+        "Прими утренние БАДы",
+        "Позавтракай",
+        "Прогулка 30 минут",
+        "Прими душ",
+        "Чтение книги",
+        "Отдых / Хобби",
+        "Тренировка лёгкая (по желанию)",
+        "Обед",
+        "Кино / Прогулка",
+        "Ужин",
+        "Сон"
+    ],
+    "Качаем банку 🏋️": [
+        "Прими утренние БАДы",
+        "Позавтракай",
+        "Разминка",
+        "Тренажерный зал",
+        "Протеиновый перекус",
+        "Душ / Восстановление",
+        "Обед",
+        "Растяжка",
+        "Вечерняя прогулка",
+        "Ужин",
+        "Сон и полное восстановление"
+    ]
+}
 
 # Прогресс пользователя
 user_steps = {}
+user_mode = {}
 progress = {}
 training_progress = {}
 
@@ -39,6 +68,12 @@ logging.basicConfig(level=logging.INFO)
 # Клавиатуры
 start_kb = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text="Я проснулся")]
+], resize_keyboard=True)
+
+mode_kb = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text="Ебашим 🛠")],
+    [KeyboardButton(text="Расслабон 🏖")],
+    [KeyboardButton(text="Качаем банку 🏋️")]
 ], resize_keyboard=True)
 
 action_kb = ReplyKeyboardMarkup(keyboard=[
@@ -55,27 +90,36 @@ async def wake_up(message: types.Message):
     progress[message.from_user.id] = {"done": 0, "skipped": 0}
     await check_new_week(message.from_user.id)
     await morning_motivation(message.from_user.id)
+    await message.answer("Выбери режим дня:", reply_markup=mode_kb)
+
+@dp.message(lambda message: message.text in day_modes.keys())
+async def choose_mode(message: types.Message):
+    user_mode[message.from_user.id] = message.text
     await send_next_step(message.from_user.id)
 
 async def send_next_step(user_id):
-    if user_id not in user_steps:
+    if user_id not in user_steps or user_id not in user_mode:
         return
     step = user_steps[user_id]
-    if step < len(day_steps):
-        await bot.send_message(user_id, f"Следующее задание: *{day_steps[step]}*", parse_mode=ParseMode.MARKDOWN, reply_markup=action_kb)
+    mode = user_mode[user_id]
+    steps_list = day_modes.get(mode, [])
+    if step < len(steps_list):
+        await bot.send_message(user_id, f"Следующее задание: *{steps_list[step]}*", parse_mode=ParseMode.MARKDOWN, reply_markup=action_kb)
         asyncio.create_task(reminder_loop(user_id, step))
     else:
         await show_day_summary(user_id)
         await bot.send_message(user_id, "Красавчик, отдыхай (: ", reply_markup=start_kb)
         del user_steps[user_id]
+        del user_mode[user_id]
 
 @dp.message(lambda message: message.text in ["Сделал", "Пропустил"])
 async def completed_step(message: types.Message):
     if message.from_user.id in user_steps:
         if message.text == "Сделал":
             progress[message.from_user.id]["done"] += 1
-            # Если этап тренажёрка
-            if "Тренажерный зал" in day_steps[user_steps[message.from_user.id]]:
+            mode = user_mode.get(message.from_user.id)
+            steps_list = day_modes.get(mode, [])
+            if "Тренажерный зал" in steps_list[user_steps[message.from_user.id]]:
                 await increment_training(message.from_user.id)
         else:
             progress[message.from_user.id]["skipped"] += 1
@@ -86,7 +130,7 @@ async def reminder_loop(user_id, step):
     for _ in range(4):
         await asyncio.sleep(900)  # 15 минут
         if user_steps.get(user_id) == step:
-            await bot.send_message(user_id, f"Напоминание! Ты ещё не сделал: *{day_steps[step]}*", parse_mode=ParseMode.MARKDOWN, reply_markup=action_kb)
+            await bot.send_message(user_id, "Напоминание! Ты ещё не сделал задание!", reply_markup=action_kb)
         else:
             break
 
