@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart, Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
@@ -60,6 +60,7 @@ user_steps = {}
 user_mode = {}
 progress = {}
 training_progress = {}
+user_events = {}  # Добавим список событий
 
 bot = Bot(TOKEN)
 dp = Dispatcher()
@@ -67,7 +68,7 @@ logging.basicConfig(level=logging.INFO)
 
 # Клавиатуры
 start_kb = ReplyKeyboardMarkup(keyboard=[
-    [KeyboardButton(text="Я проснулся")]
+    [KeyboardButton(text="Я проснулся")],
 ], resize_keyboard=True)
 
 mode_kb = ReplyKeyboardMarkup(keyboard=[
@@ -78,6 +79,10 @@ mode_kb = ReplyKeyboardMarkup(keyboard=[
 
 action_kb = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text="Сделал"), KeyboardButton(text="Пропустил")]
+], resize_keyboard=True)
+
+event_kb = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text="Добавить событие")]
 ], resize_keyboard=True)
 
 @dp.message(CommandStart())
@@ -178,8 +183,17 @@ async def check_new_week(user_id):
         else:
             await bot.send_message(user_id, "Хули ленимся? Без оправданий!")
 
-async def main():
-    await dp.start_polling(bot)
+@dp.message(Command("расписание"))
+async def show_schedule(message: types.Message):
+    user_id = message.from_user.id
+    today = datetime.now().strftime("%Y-%m-%d")
+    if user_id in user_events:
+        events = "\n".join([f"{event['time']}: {event['description']}" for event in user_events[user_id]])
+        await bot.send_message(user_id, f"Ваше расписание на {today}:\n{events}", parse_mode=ParseMode.MARKDOWN)
+    else:
+        await bot.send_message(user_id, "У вас нет добавленных событий на сегодня.", reply_markup=event_kb)
 
-if __name__ == "__main__":
-    asyncio.run(main())
+@dp.message(lambda message: message.text == "Добавить событие")
+async def add_event(message: types.Message):
+    await message.answer("Напишите описание события, например: 'Встреча с другом в 14:
+
