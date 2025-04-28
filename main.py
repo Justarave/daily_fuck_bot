@@ -195,5 +195,4 @@ async def show_schedule(message: types.Message):
 
 @dp.message(lambda message: message.text == "Добавить событие")
 async def add_event(message: types.Message):
-    await message.answer("Напишите описание события, например: 'Встреча с другом в 14:
-
+    await message.answer("Напишите описание события, например: 'Встреча с другом в 14:00'")
